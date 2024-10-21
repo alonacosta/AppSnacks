@@ -28,9 +28,8 @@ namespace AppSnacks.Services
             };
         }
 
-
         public async Task<ApiResponse<bool>> RegistrarUsuario(string nome, string email,
-                                                      string telefone, string password)
+                                                      string phoneNumber, string password)
         {
             try
             {
@@ -38,8 +37,8 @@ namespace AppSnacks.Services
                 {
                     Nome = nome,
                     Email = email,
-                    Telefone = telefone,
-                    Senha = password
+                    PhoneNumber = phoneNumber,
+                    Password = password
                 };
 
                 var json = JsonSerializer.Serialize(register, _serializerOptions);
@@ -73,7 +72,7 @@ namespace AppSnacks.Services
                 var login = new Login()
                 {
                     Email = email,
-                    Senha = password
+                    Password = password
                 };
 
                 var json = JsonSerializer.Serialize(login, _serializerOptions);
@@ -94,8 +93,8 @@ namespace AppSnacks.Services
                 var result = JsonSerializer.Deserialize<Token>(jsonResult, _serializerOptions);
 
                 Preferences.Set("accesstoken", result!.AccessToken);
-                Preferences.Set("usuarioid", (int)result.UsuarioId!);
-                Preferences.Set("usuarionome", result.UsuarioNome);
+                Preferences.Set("usuarioid", (int)result.UserId!);
+                Preferences.Set("usuarionome", result.UserName);
 
                 return new ApiResponse<bool> { Data = true };
             }
@@ -121,7 +120,6 @@ namespace AppSnacks.Services
                 return new HttpResponseMessage(HttpStatusCode.BadRequest);
             }
         }
-
 
     }
 }
