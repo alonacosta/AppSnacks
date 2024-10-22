@@ -1,18 +1,22 @@
 ﻿using AppSnacks.Pages;
 using AppSnacks.Services;
+using AppSnacks.Validations;
 
 namespace AppSnacks
 {
     public partial class App : Application
     {
         private readonly ApiService _apiService;
-        public App(ApiService apiService)
+        private readonly IValidator _validator;
+        public App(ApiService apiService, IValidator validator)
         {
-            InitializeComponent(); 
+            InitializeComponent();
 
             _apiService = apiService;
-            MainPage = new NavigationPage(new RegisterPage(_apiService));
-           
+            _validator = validator;
+
+            MainPage = new NavigationPage(new RegisterPage(_apiService, _validator));
+            
         }
     }
 }

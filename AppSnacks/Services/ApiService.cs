@@ -13,7 +13,7 @@ namespace AppSnacks.Services
     public class ApiService
     {
         private readonly HttpClient _httpClient;
-        public static readonly string BaseUrl = "https://8680hvff-7066.brs.devtunnels.ms/";
+        //public static readonly string BaseUrl = "https://8680hvff-7066.brs.devtunnels.ms/";
         private readonly ILogger<ApiService> _logger;
         JsonSerializerOptions _serializerOptions;
 
@@ -28,14 +28,14 @@ namespace AppSnacks.Services
             };
         }
 
-        public async Task<ApiResponse<bool>> RegistrarUsuario(string nome, string email,
+        public async Task<ApiResponse<bool>> RegistrarUsuario(string name, string email,
                                                       string phoneNumber, string password)
         {
             try
             {
                 var register = new Register()
                 {
-                    Nome = nome,
+                    Name = name,
                     Email = email,
                     PhoneNumber = phoneNumber,
                     Password = password
@@ -44,7 +44,7 @@ namespace AppSnacks.Services
                 var json = JsonSerializer.Serialize(register, _serializerOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await PostRequest("api/Usuarios/Register", content);
+                var response = await PostRequest("api/Users/Register", content);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -78,7 +78,7 @@ namespace AppSnacks.Services
                 var json = JsonSerializer.Serialize(login, _serializerOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-                var response = await PostRequest("api/Usuarios/Login", content);
+                var response = await PostRequest("api/Users/Login", content);
 
                 if (!response.IsSuccessStatusCode)
                 {
@@ -93,8 +93,8 @@ namespace AppSnacks.Services
                 var result = JsonSerializer.Deserialize<Token>(jsonResult, _serializerOptions);
 
                 Preferences.Set("accesstoken", result!.AccessToken);
-                Preferences.Set("usuarioid", (int)result.UserId!);
-                Preferences.Set("usuarionome", result.UserName);
+                Preferences.Set("userid", (int)result.UserId!);
+                Preferences.Set("username", result.UserName);
 
                 return new ApiResponse<bool> { Data = true };
             }
