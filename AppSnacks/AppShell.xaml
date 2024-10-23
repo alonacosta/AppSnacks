@@ -6,9 +6,17 @@
     xmlns:local="clr-namespace:AppSnacks"
     xmlns:pages="clr-namespace:AppSnacks.Pages"
     Shell.FlyoutBehavior="Disabled"
-    Shell.TabBarBackgroundColor="#a90409"
+    Shell.NavBarHasShadow="True"
+    Shell.BackgroundColor="#BF417C"
+    Shell.ForegroundColor="White"
+    Shell.TitleColor="White"
+    Shell.UnselectedColor="White"
+    Shell.DisabledColor="#BFBFBF"
+    Shell.TabBarBackgroundColor="#BF417C"
     Shell.TabBarTitleColor="White"
-    Shell.TabBarUnselectedColor="FloralWhite">
+    Shell.TabBarUnselectedColor="#FFD2FF"
+    Shell.TabBarForegroundColor="White">
+    
 
     <!--<TabBar>
         <Tab Title="Home"
