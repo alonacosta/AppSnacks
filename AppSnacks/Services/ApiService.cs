@@ -106,6 +106,33 @@ namespace AppSnacks.Services
             }
         }
 
+        public async Task<ApiResponse<bool>> AdicionaItemNoCarrinho(ShoppingCartItems shoppingCartItems)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(shoppingCartItems, _serializerOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await PostRequest("api/ShoppingCartItems", content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError($"Erro ao enviar requisição HTTP: {response.StatusCode}");
+                    return new ApiResponse<bool>
+                    {
+                        ErrorMessage = $"Erro ao enviar requisição HTTP: {response.StatusCode}"
+                    };
+                }
+
+                return new ApiResponse<bool> { Data = true };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Erro ao adicionar item no carrinho: {ex.Message}");
+                return new ApiResponse<bool> { ErrorMessage = ex.Message };
+            }
+        }
+
         private async Task<HttpResponseMessage> PostRequest(string uri, HttpContent content)
         {
             var enderecoUrl = AppConfig.BaseUrl + uri;
@@ -137,6 +164,12 @@ namespace AppSnacks.Services
         {
             string endpoint = $"api/products/{produtoId}";
             return await GetAsync<Product>(endpoint);
+        }
+
+        public async Task<(List<ShoppingCartItem>? CarrinhoCompraItems, string? ErrorMessage)> GetItensCarrinhoCompra(int usuarioId)
+        {
+            var endpoint = $"api/ShoppingCartItems/{usuarioId}";
+            return await GetAsync<List<ShoppingCartItem>>(endpoint);
         }
 
         private async Task<(T? Data, string? ErrorMessage)> GetAsync<T>(string endpoint)
@@ -196,32 +229,7 @@ namespace AppSnacks.Services
             }
         }
 
-        public async Task<ApiResponse<bool>> AdicionaItemNoCarrinho(ShoppingCartItems shoppingCartItems)
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(shoppingCartItems, _serializerOptions);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await PostRequest("api/ShoppingCartItems", content);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogError($"Erro ao enviar requisição HTTP: {response.StatusCode}");
-                    return new ApiResponse<bool>
-                    {
-                        ErrorMessage = $"Erro ao enviar requisição HTTP: {response.StatusCode}"
-                    };
-                }
-
-                return new ApiResponse<bool> { Data = true };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Erro ao adicionar item no carrinho: {ex.Message}");
-                return new ApiResponse<bool> { ErrorMessage = ex.Message };
-            }
-        }
+       
 
         
 

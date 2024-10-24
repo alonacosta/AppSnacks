@@ -127,7 +127,7 @@ public partial class ProductDetailsPage : ContentPage
                 UnitPrice = Convert.ToDecimal(LblProdutoPreco.Text),
                 ValueTotal = Convert.ToDecimal(LblPrecoTotal.Text),
                 ProductId = _produtoId,
-                ClientId = Preferences.Get("usuarioid", 0)
+                ClientId = Preferences.Get("userid", 0)
             };
             var response = await _apiService.AdicionaItemNoCarrinho(carrinhoCompra);
             if (response.Data)
