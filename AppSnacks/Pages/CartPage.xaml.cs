@@ -9,7 +9,9 @@ public partial class CartPage : ContentPage
 {
     private readonly ApiService _apiService;
     private readonly IValidator _validator;
-    private bool _loginPageDisplayed = false;   
+    private bool _loginPageDisplayed = false;
+    private bool _isNavigatingToEmptyCartPage = false;
+
 
     private ObservableCollection<ShoppingCartItem> ItensCarrinhoCompra = new ObservableCollection<ShoppingCartItem>();
 
@@ -23,10 +25,31 @@ public partial class CartPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await GetItensCarrinhoCompra();
+        if (IsNavigatingToEmptyCartPage()) return;
+
+        bool hasItems = await GetItensCarrinhoCompra();
+
+        if (hasItems)
+        {
+            ExibirEndereco();
+        }
+        else
+        {
+            await NavegarParaCarrinhoVazio();
+        }   
     }
 
-    private async Task<IEnumerable<ShoppingCartItem>> GetItensCarrinhoCompra()
+    private bool IsNavigatingToEmptyCartPage()
+    {
+        if (_isNavigatingToEmptyCartPage)
+        {
+            _isNavigatingToEmptyCartPage = false;
+            return true;
+        }
+        return false;
+    }
+
+    private async Task<bool> GetItensCarrinhoCompra()
     {
         try
         {
@@ -38,13 +61,13 @@ public partial class CartPage : ContentPage
             {
                 // Redirecionar para a p?gina de login
                 await DisplayLoginPage();
-                return Enumerable.Empty<ShoppingCartItem>();
+                return false;
             }
 
             if (itensCarrinhoCompra == null)
             {
                 await DisplayAlert("Erro", errorMessage ?? "Não foi possivel obter os itens do carrinho de compra.", "OK");
-                return Enumerable.Empty<ShoppingCartItem>();
+                return false;
             }
 
             ItensCarrinhoCompra.Clear();
@@ -56,19 +79,44 @@ public partial class CartPage : ContentPage
             CvCarrinho.ItemsSource = ItensCarrinhoCompra;
             AtualizaPrecoTotal(); // Atualizar o preco total ap?s atualizar os itens do carrinho
 
-            //if (!ItensCarrinhoCompra.Any())
-            //{
-            //    return false;
-            //}
-            //return true;
-            return ItensCarrinhoCompra;
+            if (!ItensCarrinhoCompra.Any())
+            {
+                return false;
+            }
+            return true;
         }
         catch (Exception ex)
         {
             await DisplayAlert("Erro", $"Ocorreu um erro inesperado: {ex.Message}", "OK");
             //return false;
-            return Enumerable.Empty<ShoppingCartItem>();
+            return false;
         }
+    }
+
+    private void ExibirEndereco()
+    {
+        bool enderecoSalvo = Preferences.ContainsKey("endereco");
+
+        if (enderecoSalvo)
+        {
+            string nome = Preferences.Get("nome", string.Empty);
+            string endereco = Preferences.Get("endereco", string.Empty);
+            string telefone = Preferences.Get("telefone", string.Empty);
+
+            // Formatar os dados conforme desejado na label
+            LblEndereco.Text = $"{nome}\n{endereco} \n{telefone}";
+        }
+        else
+        {
+            LblEndereco.Text = "Informe o seu endereço";
+        }
+    }
+
+    private async Task NavegarParaCarrinhoVazio()
+    {
+        LblEndereco.Text = string.Empty;
+        _isNavigatingToEmptyCartPage = true;
+        await Navigation.PushAsync(new ShoppingCartEmptyPage());
     }
 
     private async Task DisplayLoginPage()
@@ -93,28 +141,86 @@ public partial class CartPage : ContentPage
 
 
 
-    private void BtnDecrementar_Clicked(object sender, EventArgs e)
+    private async void BtnDecrementar_Clicked(object sender, EventArgs e)
     {
+        if (sender is Button button && button.BindingContext is ShoppingCartItem itemCarrinho)
+        {
+            if (itemCarrinho.Quantity == 1) return;
+            else
+            {
+                itemCarrinho.Quantity--;
+                AtualizaPrecoTotal();
+                await _apiService.AtualizaQuantidadeItemCarrinho(itemCarrinho.ProductId, "diminuir");
+            }
+        }
 
     }
 
-    private void BtnIncrementar_Clicked(object sender, EventArgs e)
+    private async void BtnIncrementar_Clicked(object sender, EventArgs e)
     {
-
+        if (sender is Button button && button.BindingContext is ShoppingCartItem itemCarrinho)
+        {
+            itemCarrinho.Quantity++;
+            AtualizaPrecoTotal();
+            await _apiService.AtualizaQuantidadeItemCarrinho(itemCarrinho.ProductId, "aumentar");
+        }
     }
 
-    private void BtnDeletar_Clicked(object sender, EventArgs e)
+    private async void BtnDeletar_Clicked(object sender, EventArgs e)
     {
-
+        if (sender is ImageButton button && button.BindingContext is ShoppingCartItem itemCarrinho)
+        {
+            bool resposta = await DisplayAlert("Confirmação",
+                          "Tem certeza que deseja excluir este item do carrinho?", "Sim", "Não");
+            if (resposta)
+            {
+                ItensCarrinhoCompra.Remove(itemCarrinho);
+                AtualizaPrecoTotal();
+                await _apiService.AtualizaQuantidadeItemCarrinho(itemCarrinho.ProductId, "deletar");
+            }
+        }
     }
 
     private void BtnEditaEndereco_Clicked(object sender, EventArgs e)
     {
-
+        Navigation.PushAsync(new AddressPage());
     }
 
-    private void TapConfirmarPedido_Tapped(object sender, TappedEventArgs e)
+    private async void TapConfirmarPedido_Tapped(object sender, TappedEventArgs e)
     {
+        if (ItensCarrinhoCompra == null || !ItensCarrinhoCompra.Any())
+        {
+            await DisplayAlert("Informação", "Seu carrinho está vazio ou o pedido já foi confirmado.", "OK");
+            return;
+        }
+
+        var pedido = new Order()
+        {
+            Address = LblEndereco.Text,
+            UserId = Preferences.Get("userid", 0),
+            Total = Convert.ToDecimal(LblPrecoTotal.Text)
+        };
+
+        var response = await _apiService.ConfirmarPedido(pedido);
+
+        if (response.HasError)
+        {
+            if (response.ErrorMessage == "Unauthorized")
+            {
+                // Redirecionar para a p gina de login
+                await DisplayLoginPage();
+                return;
+            }
+            await DisplayAlert("Opa !!!", $"Algo deu errado: {response.ErrorMessage}", "Cancelar");
+            return;
+        }
+
+        ItensCarrinhoCompra.Clear();
+        LblEndereco.Text = "Informe o seu endereço";
+        LblPrecoTotal.Text = "0.00";
+
+        await Navigation.PushAsync(new ConfirmedOrderPage());
+
 
     }
 }

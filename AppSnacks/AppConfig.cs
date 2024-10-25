@@ -8,7 +8,7 @@ namespace AppSnacks
 {
     public class AppConfig
     {
-        public static readonly string BaseUrl = "https://l3p3xgzr-7099.uks1.devtunnels.ms/";
+        public static readonly string BaseUrl = "https://qg6q9jqr-7099.uks1.devtunnels.ms/";
 
         public static readonly string titleHomePage = "Lanches Mac";
 

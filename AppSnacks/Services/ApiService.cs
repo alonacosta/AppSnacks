@@ -1,13 +1,9 @@
 ﻿using AppSnacks.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace AppSnacks.Services
 {
@@ -27,6 +23,7 @@ namespace AppSnacks.Services
             {
                 PropertyNameCaseInsensitive = true
             };
+            /*_httpClient.Timeout = TimeSpan.FromSeconds(30);*/ // Configura o timeout
         }
 
         public async Task<ApiResponse<bool>> RegistrarUsuario(string name, string email,
@@ -78,6 +75,8 @@ namespace AppSnacks.Services
 
                 var json = JsonSerializer.Serialize(login, _serializerOptions);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+
 
                 var response = await PostRequest("api/Users/Login", content);
 
@@ -133,6 +132,34 @@ namespace AppSnacks.Services
             }
         }
 
+        public async Task<ApiResponse<bool>> ConfirmarPedido(Order pedido)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(pedido, _serializerOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await PostRequest("api/Orders", content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string errorMessage = response.StatusCode == HttpStatusCode.Unauthorized
+                        ? "Unauthorized"
+                        : $"Erro ao enviar requisição HTTP: {response.StatusCode}";
+
+                    _logger.LogError($"Erro ao enviar requisição HTTP: {response.StatusCode}");
+                    return new ApiResponse<bool> { ErrorMessage = errorMessage };
+                }
+                return new ApiResponse<bool> { Data = true };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Erro ao confirmar pedido: {ex.Message}");
+                return new ApiResponse<bool> { ErrorMessage = ex.Message };
+            }
+        }
+
+
         private async Task<HttpResponseMessage> PostRequest(string uri, HttpContent content)
         {
             var enderecoUrl = AppConfig.BaseUrl + uri;
@@ -148,6 +175,8 @@ namespace AppSnacks.Services
                 return new HttpResponseMessage(HttpStatusCode.BadRequest);
             }
         }
+
+
 
         public async Task<(List<Category>? Categorias, string? ErrorMessage)> GetCategorias()
         {
@@ -220,6 +249,59 @@ namespace AppSnacks.Services
             }
         }
 
+        public async Task<(bool Data, string? ErrorMessage)> AtualizaQuantidadeItemCarrinho(int produtoId, string acao)
+        {
+            try
+            {
+                var content = new StringContent(string.Empty, Encoding.UTF8, "application/json");
+                var response = await PutRequest($"api/ShoppingCartItems?productId={produtoId}&action={acao}", content);
+                if (response.IsSuccessStatusCode)
+                {
+                    return (true, null);
+                }
+                else
+                {
+                    if (response.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        string errorMessage = "Unauthorized";
+                        _logger.LogWarning(errorMessage);
+                        return (false, errorMessage);
+                    }
+                    string generalErrorMessage = $"Erro na requisição: {response.ReasonPhrase}";
+                    _logger.LogError(generalErrorMessage);
+                    return (false, generalErrorMessage);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                string errorMessage = $"Erro de requisição HTTP: {ex.Message}";
+                _logger.LogError(ex, errorMessage);
+                return (false, errorMessage);
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = $"Erro inesperado: {ex.Message}";
+                _logger.LogError(ex, errorMessage);
+                return (false, errorMessage);
+            }
+        }
+
+        private async Task<HttpResponseMessage> PutRequest(string uri, HttpContent content)
+        {
+            var enderecoUrl = AppConfig.BaseUrl + uri;
+            try
+            {
+                AddAuthorizationHeader();
+                var result = await _httpClient.PutAsync(enderecoUrl, content);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Erro ao enviar requisição PUT para {uri}: {ex.Message}");
+                return new HttpResponseMessage(HttpStatusCode.BadRequest);
+            }
+        }
+
         private void AddAuthorizationHeader()
         {
             var token = Preferences.Get("accesstoken", string.Empty);
@@ -228,12 +310,5 @@ namespace AppSnacks.Services
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
         }
-
-       
-
-        
-
-
-
     }
 }
