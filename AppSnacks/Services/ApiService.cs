@@ -22,8 +22,7 @@ namespace AppSnacks.Services
             _serializerOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
-            };
-            /*_httpClient.Timeout = TimeSpan.FromSeconds(30);*/ // Configura o timeout
+            };            
         }
 
         public async Task<ApiResponse<bool>> RegistrarUsuario(string name, string email,
@@ -159,6 +158,33 @@ namespace AppSnacks.Services
             }
         }
 
+        public async Task<ApiResponse<bool>> UploadImagemUsuario(byte[] imageArray)
+        {
+            try
+            {
+                var content = new MultipartFormDataContent();
+                content.Add(new ByteArrayContent(imageArray), "image", "image.jpg");
+                var response = await PostRequest("api/users/uploadimage", content);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    string errorMessage = response.StatusCode == HttpStatusCode.Unauthorized
+                      ? "Unauthorized"
+                      : $"Erro ao enviar requisição HTTP: {response.StatusCode}";
+
+                    _logger.LogError($"Erro ao enviar requisição HTTP: {response.StatusCode}");
+                    return new ApiResponse<bool> { ErrorMessage = errorMessage };
+                }
+                return new ApiResponse<bool> { Data = true };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Erro ao fazer upload da imagem do usuário: {ex.Message}");
+                return new ApiResponse<bool> { ErrorMessage = ex.Message };
+            }
+        }
+
+
 
         private async Task<HttpResponseMessage> PostRequest(string uri, HttpContent content)
         {
@@ -200,6 +226,13 @@ namespace AppSnacks.Services
             var endpoint = $"api/ShoppingCartItems/{usuarioId}";
             return await GetAsync<List<ShoppingCartItem>>(endpoint);
         }
+
+        public async Task<(ImageProfile? ImagemPerfil, string? ErrorMessage)> GetImagemPerfilUsuario()
+        {
+            string endpoint = "api/users/userimage";
+            return await GetAsync<ImageProfile>(endpoint);
+        }
+
 
         private async Task<(T? Data, string? ErrorMessage)> GetAsync<T>(string endpoint)
         {

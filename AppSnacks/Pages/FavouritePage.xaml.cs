@@ -46,7 +46,6 @@ public partial class FavouritePage : ContentPage
         }
     }
 
-
     private void CvProdutos_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         var currentSelection = e.CurrentSelection.FirstOrDefault() as FavouriteProduct;
